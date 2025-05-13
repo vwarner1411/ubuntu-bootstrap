@@ -79,8 +79,6 @@ ensure_omz() {
   else
     git -C "$HOME/.oh-my-zsh" pull --quiet --ff-only && ok "Oh-My-Zsh updated"
   fi
-  chmod -R 755 "$HOME/.oh-my-zsh"
-  ok "Fixed Oh-My-Zsh permissions"
 }
 ensure_omz
 
@@ -101,8 +99,11 @@ if [[ -n $GITHUB_DOTFILES ]]; then
   EXCLUDES=(--exclude ".git" --exclude "README*" --exclude "*setup.sh*" --exclude ".ssh")
   rsync -a --update --quiet "${EXCLUDES[@]}" "$SRC/" "$HOME/"
   ok "Dotfiles copied"
+  chmod -R 755 "$HOME/.oh-my-zsh"
+  ok "Fixed Oh-My-Zsh permissions"
 else
   warn "No GITHUB_DOTFILES provided – skipping dotfiles sync"
+
 fi
 
 ###################################
