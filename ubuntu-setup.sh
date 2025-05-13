@@ -18,32 +18,32 @@ warn() { echo -e "${YELLOW}${BOLD}!${RESET} $*"; }
 fail() { echo -e "${RED}${BOLD}✖${RESET} $*"; exit 1; }
 
 TMPDIR=""
-cleanup() { [[ -n $TMPDIR && -d $TMPDIR ]] && rm -rf "$TMPDIR"; [[ -f "$HOME/ubuntu-2404-setup.sh" ]] && rm -f "$HOME/ubuntu-2404-setup.sh"; }
+cleanup() {
+  [[ -n $TMPDIR && -d $TMPDIR ]] && rm -rf "$TMPDIR"
+  [[ -f "$HOME/ubuntu-2404-setup.sh" ]] && rm -f "$HOME/ubuntu-2404-setup.sh"
+}
 trap cleanup EXIT
 
-#############################
-# 1. Privilege check        #
-#############################
+###################################
+# 1. Privilege check              #
+###################################
 [[ $(id -u) -ne 0 ]] || fail "Do not run as root. Use sudo when prompted."
 
-#############################
-# 2. Packages               #
-#############################
+###################################
+# 2. Package handling             #
+###################################
 read -rp "${BOLD}Update APT and install required packages? [y/N] ${RESET}" confirm
 [[ ${confirm,,} == y* ]] || fail "Aborted by user."
 
-# Detect Ubuntu release (jammy = 22.04; noble = 24.04)
 source /etc/os-release || true
-UBU_CODENAME="${UBUNTU_CODENAME:-${VERSION_CODENAME:-}}"
-
+CODENAME="${UBUNTU_CODENAME:-${VERSION_CODENAME:-}}"
 PKGS=(); need(){ command -v "$1" &>/dev/null || PKGS+=("${2:-$1}"); }
 need curl; need rsync; need jq; need btop; need nvim neovim; need zsh; need ddate
 
-# lsd handling
+# lsd
 if ! command -v lsd &>/dev/null; then
-  if [[ $UBU_CODENAME == "jammy" ]]; then
-    # 22.04 – install snapd and lsd snap
-    info "Installing lsd via snap (not in 22.04 apt)"
+  if [[ $CODENAME == jammy ]]; then
+    info "Installing lsd via snap (22.04)"
     sudo apt update -qq && sudo apt install -y snapd >/dev/null
     sudo snap install lsd >/dev/null
     ok "lsd snap installed"
@@ -58,18 +58,18 @@ if ((${#PKGS[@]})); then
   ok "APT packages installed"
 fi
 
-#############################
-# 3. Default shell          #
-#############################
+###################################
+# 3. Default shell                #
+###################################
 if [[ $SHELL != $(command -v zsh) ]]; then
   info "Setting default shell to zsh"
   chsh -s "$(command -v zsh)" "$USER"
   ok "Default shell switched"
 fi
 
-#############################
-# 4. Oh-My-Zsh              #
-#############################
+###################################
+# 4. Oh-My-Zsh install/update     #
+###################################
 ensure_omz() {
   command -v git &>/dev/null || { info "Installing git"; sudo apt install -y git >/dev/null; }
   if [[ ! -d $HOME/.oh-my-zsh ]]; then
@@ -79,12 +79,14 @@ ensure_omz() {
   else
     git -C "$HOME/.oh-my-zsh" pull --quiet --ff-only && ok "Oh-My-Zsh updated"
   fi
+  chmod -R 755 "$HOME/.oh-my-zsh"
+  ok "Fixed Oh-My-Zsh permissions"
 }
 ensure_omz
 
-#############################
-# 5. Dotfiles repo          #
-#############################
+###################################
+# 5. Sync dotfiles (exclude .ssh) #
+###################################
 GITHUB_DOTFILES="${1:-${GITHUB_DOTFILES:-}}"
 if [[ -n $GITHUB_DOTFILES ]]; then
   info "Syncing dotfiles from $GITHUB_DOTFILES"
@@ -96,16 +98,25 @@ if [[ -n $GITHUB_DOTFILES ]]; then
   done || fail "Cannot download repo archive"
   tar -xzf "$TMPDIR/repo.tar.gz" -C "$TMPDIR"
   SRC=$(find "$TMPDIR" -maxdepth 1 -type d -name '*-*' | head -n1)
-  EXCLUDES=(--exclude ".git" --exclude "README*" --exclude "*setup.sh*")
+  EXCLUDES=(--exclude ".git" --exclude "README*" --exclude "*setup.sh*" --exclude ".ssh")
   rsync -a --update --quiet "${EXCLUDES[@]}" "$SRC/" "$HOME/"
   ok "Dotfiles copied"
 else
   warn "No GITHUB_DOTFILES provided – skipping dotfiles sync"
 fi
 
-#############################
-# 6. Oh-My-Zsh plugins       #
-#############################
+###################################
+# 6. SSH permissions fix          #
+###################################
+if [[ -d $HOME/.ssh ]]; then
+  chmod 700 "$HOME/.ssh"
+  [[ -f $HOME/.ssh/authorized_keys ]] && chmod 600 "$HOME/.ssh/authorized_keys"
+  ok "SSH directory permissions set"
+fi
+
+###################################
+# 7. Ensure Zsh plugins           #
+###################################
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 clone() { [[ -d $2 ]] || git clone --quiet --depth 1 "$1" "$2"; }
 clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
@@ -114,7 +125,7 @@ clone https://github.com/zsh-users/zsh-completions.git            "$ZSH_CUSTOM/p
 clone https://github.com/TamCore/autoupdate-oh-my-zsh-plugins.git "$ZSH_CUSTOM/plugins/autoupdate"
 ok "Zsh plugins ensured"
 
-#############################
-# 7. Finish                 #
-#############################
+###################################
+# 8. Finish                       #
+###################################
 ok "Setup complete. Open a new terminal session to start using your environment."
