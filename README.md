@@ -21,7 +21,7 @@ curl -fsSL https://raw.githubusercontent.com/vwarner1411/ubuntu-bootstrap/main/u
 ### Re‑run any time
 
 ```bash
-./ubuntu-2404-setup.sh   # assumes repo already cloned
+./ubuntu-setup.sh   # assumes repo already cloned
 #  – or –
 GITHUB_DOTFILES=git@github.com:you/your-dotfiles.git ./ubuntu-setup.sh
 ```
@@ -32,28 +32,48 @@ Every run mirrors the repo back onto `$HOME` with `rsync --delete`, so updates 
 
 ## What the script does
 
-1. **Checks packages** – installs only what’s missing (`zsh neovim lsd btop ddate curl rsync jq`).
-2. **Switches your login shell** to `zsh`.
-3. **Installs Oh My Zsh** (adds `git` on‑demand) and loads the **Dracula‑Pro** theme shipped in the repo.
-4. **Downloads this repo** as a tarball and **rsyncs** every file/folder into `$HOME`.
-5. **Cleans up everything** – temp directory *and* the installer script self‑delete.
+| Category | Packages / tools | Notes |
+|----------|------------------|-------|
+| Shell & core | `zsh` + **Oh‑My‑Zsh** | Sets default shell, installs/upgrades OMZ, fixes directory perms. |
+| Prompt extras | Dracula‑Pro theme, `zsh‑syntax‑highlighting`, `zsh‑autosuggestions`, `zsh‑completions`, `autoupdate` |
+| Editors & viewers | `neovim`, `tree`, `ncdu`, `lynx` |
+| System utils | `curl`, `wget`, `rsync`, `jq`, `btop`, `ddate`, `git` |
+| Directory listing | **`lsd`** (colourful `ls` replacement) — via **snap** on 22.04, via **apt** on 24.04+ |
+| Theming | Dracula theme for btop, LSD colours, Dracula‑Pro for Neovim |
+| Dot‑files | Repo tarball is downloaded, then `rsync -a --update` into `$HOME` — *no deletions*; excludes `.ssh`, READMEs, `*setup.sh*`. |
+| Permissions | `.ssh` fixed to `0700 / 0600`, OMZ fixed to `0755` |
+| Cleanup | Temp dir + any copied `ubuntu-bootstrap.sh` removed |
 
 ---
 
-## Repo layout (example)
+## Contents of this repo
 
 ```
-.
-├── ubuntu-setup.sh          # bootstrap script (self‑destructs)
-├── .zshrc                        # shell config (calls dracula‑pro)
+ubuntu-bootstrap/
+├── ubuntu-bootstrap.sh               # bootstrap script (v13)
+├── .zshrc                            # shell config referencing dracula‑pro prompt
 ├── .oh-my-zsh/
-│   └── custom/themes/dracula-pro.zsh-theme
+│   └── custom/
+│       └── themes/
+│           └── dracula-pro.zsh-theme
 ├── .config/
-│   ├── nvim/init.vim             # Neovim config (Dracula‑Pro)
-│   ├── btop/themes/dracula.theme
-│   └── lsd/{config.yaml,colors.yaml}
-└── .local/share/nvim/site/pack/themes/start/dracula_pro/…
-    # full colour‑scheme so Neovim works offline
+│   ├── btop/
+│   │   └── themes/
+│   │       └── dracula.theme         # Dracula palette for btop
+│   └── lsd/
+│       ├── colors.yaml               # 256‑colour mapping for lsd
+│       └── config.yaml               # lsd layout/icons settings
+├── .local/
+│   └── share/nvim/site/pack/themes/start/dracula_pro/
+│       ├── colors/                   # dracula_pro.vim + palette variants
+│       ├── autoload/
+│       │   ├── dracula_pro.vim
+│       │   └── …
+│       ├── after/
+│       │   ├── plugin/dracula_pro.vim
+│       │   └── syntax/*.vim          # language‑specific tweaks
+│       └── README.md (upstream)
+└── README.md                         # you’re reading it
 ```
 
 Add **anything else** you want replicated – `.gitconfig`, `.ssh/config`, `etc/systemd/`, `starship.toml`, language runtimes, etc.  The rsync step mirrors paths exactly.
@@ -75,16 +95,6 @@ Add **anything else** you want replicated – `.gitconfig`, `.ssh/config`, `etc/
 <details>
 
 It’s tested on Ubuntu 22.04 & 24.04. Most derivatives should work if package names match.
-
-</details>
-
-
-<details>
-<summary>Why tarball instead of <code>git clone</code>?</summary>
-
-* **Works without Git** on the target host.
-* Faster (\~300 KB vs multi‑MB clone).
-* Avoids leaving a `.git` directory in `$HOME`.
 
 </details>
 
