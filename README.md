@@ -12,8 +12,8 @@ Automate your **fresh Ubuntu 22.04 / 24.04** install into a fully‑themed wor
 ## Quick start
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/vwarner1411/ubuntu-2204-bootstrap/main/ubuntu-2204-setup.sh | \
-  GITHUB_DOTFILES=https://github.com/vwarner1411/ubuntu-2204-bootstrap bash
+curl -fsSL https://raw.githubusercontent.com/vwarner1411/ubuntu-2404-bootstrap/main/ubuntu-2404-setup.sh | \
+  GITHUB_DOTFILES=https://github.com/vwarner1411/ubuntu-2404-bootstrap bash
 ```
 
 *No Git required.* The script downloads the repo as a tarball with **curl** and only installs **git** later if Oh‑My‑Zsh isn’t already on the box.
@@ -21,9 +21,9 @@ curl -fsSL https://raw.githubusercontent.com/vwarner1411/ubuntu-2204-bootstrap/m
 ### Re‑run any time
 
 ```bash
-./ubuntu-2204-setup.sh   # assumes repo already cloned
+./ubuntu-2404-setup.sh   # assumes repo already cloned
 #  – or –
-GITHUB_DOTFILES=git@github.com:you/your-dotfiles.git ./ubuntu-2204-setup.sh
+GITHUB_DOTFILES=git@github.com:you/your-dotfiles.git ./ubuntu-2404-setup.sh
 ```
 
 Every run mirrors the repo back onto `$HOME` with `rsync --delete`, so updates are painless.
@@ -44,7 +44,7 @@ Every run mirrors the repo back onto `$HOME` with `rsync --delete`, so updates 
 
 ```
 .
-├── ubuntu-2204-setup.sh          # bootstrap script (self‑destructs)
+├── ubuntu-2404-setup.sh          # bootstrap script (self‑destructs)
 ├── .zshrc                        # shell config (calls dracula‑pro)
 ├── .oh-my-zsh/
 │   └── custom/themes/dracula-pro.zsh-theme
