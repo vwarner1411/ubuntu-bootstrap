@@ -20,7 +20,7 @@ fail() { echo -e "${RED}${BOLD}✖${RESET} $*"; exit 1; }
 TMPDIR=""
 cleanup() {
   [[ -n $TMPDIR && -d $TMPDIR ]] && rm -rf "$TMPDIR"
-  [[ -f "$HOME/ubuntu-2404-setup.sh" ]] && rm -f "$HOME/ubuntu-2404-setup.sh"
+  [[ -f "$HOME/ubuntu-bootstrap.sh" ]] && rm -f "$HOME/ubuntu-bootstrap.sh"
 }
 trap cleanup EXIT
 
@@ -38,9 +38,9 @@ read -rp "${BOLD}Update APT and install required packages? [y/N] ${RESET}" confi
 source /etc/os-release || true
 CODENAME="${UBUNTU_CODENAME:-${VERSION_CODENAME:-}}"
 PKGS=(); need(){ command -v "$1" &>/dev/null || PKGS+=("${2:-$1}"); }
-need curl; need rsync; need jq; need btop; need nvim neovim; need zsh; need ddate
+need git; need curl; need wget; need rsync; need jq; need tree; need ncdu; need lynx; need btop; need neovim; need zsh; need ddate; need nfs-common; need locate; need sysstat; need iotop; need iftop
 
-# lsd
+# lsd handling
 if ! command -v lsd &>/dev/null; then
   if [[ $CODENAME == jammy ]]; then
     info "Installing lsd via snap (22.04)"
@@ -85,7 +85,7 @@ ensure_omz() {
 ensure_omz
 
 ###################################
-# 5. Sync dotfiles (exclude .ssh) #
+# 5. Sync dotfiles (excludes .ssh) #
 ###################################
 GITHUB_DOTFILES="${1:-${GITHUB_DOTFILES:-}}"
 if [[ -n $GITHUB_DOTFILES ]]; then
@@ -106,7 +106,7 @@ else
 fi
 
 ###################################
-# 6. SSH permissions fix          #
+# 6. SSH permissions              #
 ###################################
 if [[ -d $HOME/.ssh ]]; then
   chmod 700 "$HOME/.ssh"
