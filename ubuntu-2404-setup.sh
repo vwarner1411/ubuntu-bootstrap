@@ -3,22 +3,15 @@
 # Ubuntu post-install bootstrap script
 set -euo pipefail
 
-###################################
-# 0. Cleanup on exit               #
-###################################
 TMPDIR=""
 cleanup() {
   [[ -n "$TMPDIR" && -d "$TMPDIR" ]] && rm -rf "$TMPDIR"
-  # Remove the script if it’s a regular file (not /dev/fd/63 from curl|bash)
-  if [[ -f "$0" ]]; then
-    echo "Removing installer script $0"
-    rm -- "$0"
-  fi
+  [[ -f "$0" ]] && { echo "Removing installer script $0"; rm -- "$0"; }
 }
 trap cleanup EXIT
 
 ###################################
-# 1. Sanity checks                #
+# 1. Privilege check              #
 ###################################
 if [[ $(id -u) -eq 0 ]]; then
   echo "Run this script as a sudo‑capable user, not root." >&2
@@ -26,74 +19,77 @@ if [[ $(id -u) -eq 0 ]]; then
 fi
 
 ###################################
-# 2. Package check & install      #
+# 2. Package check / install      #
 ###################################
-read -rp $'\nUpdate system and install required packages? [y/N] ' confirm
+read -rp $'\nUpdate package index and install missing packages? [y/N] ' confirm
 [[ ${confirm,,} == y* ]] || { echo "Aborted."; exit 1; }
 
 MISSING_PKGS=()
 need() { command -v "$1" &>/dev/null || MISSING_PKGS+=("${2:-$1}"); }
 need curl curl
 need rsync rsync
-need jq   jq
-need lsd  lsd
+need jq jq
+need lsd lsd
 need btop btop
 need nvim neovim
-need zsh  zsh
+need zsh zsh
 need ddate ddate
 
 if (( ${#MISSING_PKGS[@]} )); then
-  echo "\nInstalling: ${MISSING_PKGS[*]}"
   sudo apt update && sudo apt install -y "${MISSING_PKGS[@]}"
 fi
 
 ###################################
-# 3. Set default shell to zsh     #
+# 3. Default shell → zsh          #
 ###################################
-if [[ $SHELL != "$(command -v zsh)" ]]; then
-  echo "\nSwitching default shell to zsh…"
+if [[ $SHELL != $(command -v zsh) ]]; then
+  echo "Setting default shell to zsh…"
   chsh -s "$(command -v zsh)" "$USER"
 fi
 
 ###################################
-# 4. Oh‑My‑Zsh (git only if need) #
+# 4. Oh‑My‑Zsh (install git if needed)
 ###################################
-if [[ ! -d $HOME/.oh-my-zsh ]]; then
-  if ! command -v git &>/dev/null; then
-    echo "\nInstalling git (needed for Oh‑My‑Zsh)…"
-    sudo apt install -y git
-  fi
+if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
+  command -v git &>/dev/null || { echo "Installing git for Oh‑My‑Zsh…"; sudo apt install -y git; }
   RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 fi
 
 ###################################
-# 5. Fetch & deploy dotfiles repo #
+# 5. Fetch & copy repo files      #
 ###################################
 GITHUB_DOTFILES="${1:-${GITHUB_DOTFILES:-}}"
-if [[ -z "$GITHUB_DOTFILES" ]]; then
-  echo "\nNo GITHUB_DOTFILES repo provided – skipping sync."
-else
-  echo "\nDownloading dotfiles tarball…"
+if [[ -n "$GITHUB_DOTFILES" ]]; then
+  echo "Downloading dotfiles repo archive…"
   TMPDIR=$(mktemp -d)
-  # Extract owner/repo path from any git URL variant
   RE_PATH=$(echo "$GITHUB_DOTFILES" | sed -E 's#(git@github.com:|https://github.com/)([^/.]+/[^/.]+).*#\2#')
   TAR_OK=false
-  for branch in main master; do
-    TAR_URL="https://github.com/${RE_PATH}/archive/refs/heads/${branch}.tar.gz"
-    if curl -fsSL "$TAR_URL" -o "$TMPDIR/repo.tar.gz"; then
-      TAR_OK=true; break; fi
+  for b in main master; do
+    TAR_URL="https://github.com/${RE_PATH}/archive/refs/heads/${b}.tar.gz"
+    curl -fsSL "$TAR_URL" -o "$TMPDIR/repo.tar.gz" && { TAR_OK=true; break; }
   done
-  if ! $TAR_OK; then
-    echo "Failed to fetch repo tarball from GitHub" >&2; exit 1; fi
-
+  $TAR_OK || { echo "Failed to fetch repo archive" >&2; exit 1; }
   tar -xzf "$TMPDIR/repo.tar.gz" -C "$TMPDIR"
-  EXTRACT=$(find "$TMPDIR" -maxdepth 1 -type d -name '*-*' | head -n 1)
-  echo "Rsync → $HOME (mirroring repo layout)…"
-  rsync -a --delete --exclude ".git" "$EXTRACT/" "$HOME/"
+  SRC=$(find "$TMPDIR" -maxdepth 1 -type d -name '*-*' | head -n 1)
+  echo "Copying repo contents into $HOME (non‑destructive)…"
+  rsync -a --update --progress --exclude ".git" "$SRC/" "$HOME/"
+else
+  echo "No GITHUB_DOTFILES provided – skipping dotfiles sync."
 fi
 
 ###################################
-# 6. Done                         #
+# 6. Ensure Oh‑My‑Zsh plugins     #
 ###################################
-echo $'\nFinished!  Open a new terminal to enjoy your Dracula‑powered shell.\n   (This installer just self‑deleted to stay tidy.)'
+ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+clone() { [[ -d "$2" ]] || git clone --depth 1 "$1" "$2"; }
+command -v git &>/dev/null || sudo apt install -y git
+clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
+clone https://github.com/zsh-users/zsh-autosuggestions.git        "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
+clone https://github.com/zsh-users/zsh-completions.git            "$ZSH_CUSTOM/plugins/zsh-completions"
+clone https://github.com/TamCore/autoupdate-oh-my-zsh-plugins.git "$ZSH_CUSTOM/plugins/autoupdate"
+
+###################################
+# 7. Done                         #
+###################################
+echo "Setup complete. Open a new terminal to start using your configured environment."
