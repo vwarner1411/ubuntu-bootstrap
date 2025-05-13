@@ -1,6 +1,6 @@
 local ret_status="%(?:%{$fg_bold[green]%}➜ :%{$fg_bold[red]%}➜ )"
 
-PROMPT='%F{magenta}%n%f@%F{blue}${${(%):-%m}#zoltan-}%f %{$fg_bold[green]%}❯ %{$fg_bold[blue]%}%c $(git_prompt_info)% %{$reset_color%}'
+PROMPT='%F{magenta}%n%f@%F{blue}${${(%):-%m}}%f %{$fg_bold[green]%}❯ %{$fg_bold[blue]%}%c $(git_prompt_info)% %{$reset_color%}'
 
 ZSH_THEME_GIT_PROMPT_CLEAN=") %{$fg_bold[green]%}✔ "
 ZSH_THEME_GIT_PROMPT_DIRTY=") %{$fg_bold[yellow]%}✘ "
