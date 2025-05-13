@@ -1,0 +1,18 @@
+theme[main_bg]="#282A36"
+theme[main_fg]="#BD93F9"
+theme[title]="#f8f8f2"
+theme[hi_fg]="#ff79c6"
+theme[selected_bg]="#44475A"
+theme[selected_fg]="#ECEFF4"
+theme[inactive_fg]="#6272a4"
+theme[proc_misc]="#BD93F9"
+theme[cpu_box]="#ff79c6"
+theme[mem_box]="#ff79c6"
+theme[net_box]="#ff79c6"
+theme[proc_box]="#ff79c6"
+theme[div_line]="#ff79c6"
+for x in temp cpu free cached available used download upload; do
+  theme["${x}_start"]="#bd93f9"
+  theme["${x}_mid"]="#bd93f9"
+  theme["${x}_end"]="#bd93f9"
+  done
