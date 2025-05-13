@@ -18,31 +18,44 @@ warn() { echo -e "${YELLOW}${BOLD}!${RESET} $*"; }
 fail() { echo -e "${RED}${BOLD}✖${RESET} $*"; exit 1; }
 
 TMPDIR=""
-cleanup() {
-  [[ -n $TMPDIR && -d $TMPDIR ]] && rm -rf "$TMPDIR"
-  # remove copied script if it exists in HOME
-  [[ -f "$HOME/ubuntu-2404-setup.sh" ]] && rm -f "$HOME/ubuntu-2404-setup.sh"
-}
+cleanup() { [[ -n $TMPDIR && -d $TMPDIR ]] && rm -rf "$TMPDIR"; [[ -f "$HOME/ubuntu-2404-setup.sh" ]] && rm -f "$HOME/ubuntu-2404-setup.sh"; }
 trap cleanup EXIT
 
 #############################
 # 1. Privilege check        #
 #############################
-[[ $(id -u) -ne 0 ]] || fail "Do not run as root. Use a regular user with sudo."
+[[ $(id -u) -ne 0 ]] || fail "Do not run as root. Use sudo when prompted."
 
 #############################
 # 2. Packages               #
 #############################
 read -rp "${BOLD}Update APT and install required packages? [y/N] ${RESET}" confirm
 [[ ${confirm,,} == y* ]] || fail "Aborted by user."
+
+# Detect Ubuntu release (jammy = 22.04; noble = 24.04)
+source /etc/os-release || true
+UBU_CODENAME="${UBUNTU_CODENAME:-${VERSION_CODENAME:-}}"
+
 PKGS=(); need(){ command -v "$1" &>/dev/null || PKGS+=("${2:-$1}"); }
-need curl; need rsync; need jq; need lsd; need btop; need nvim neovim; need zsh; need ddate
+need curl; need rsync; need jq; need btop; need nvim neovim; need zsh; need ddate
+
+# lsd handling
+if ! command -v lsd &>/dev/null; then
+  if [[ $UBU_CODENAME == "jammy" ]]; then
+    # 22.04 – install snapd and lsd snap
+    info "Installing lsd via snap (not in 22.04 apt)"
+    sudo apt update -qq && sudo apt install -y snapd >/dev/null
+    sudo snap install lsd >/dev/null
+    ok "lsd snap installed"
+  else
+    PKGS+=(lsd)
+  fi
+fi
+
 if ((${#PKGS[@]})); then
-  info "Installing: ${PKGS[*]}"
+  info "Installing APT packages: ${PKGS[*]}"
   sudo apt update -qq && sudo apt install -y ${PKGS[*]} >/dev/null
-  ok "Packages installed"
-else
-  ok "Required packages already present"
+  ok "APT packages installed"
 fi
 
 #############################
@@ -55,16 +68,16 @@ if [[ $SHELL != $(command -v zsh) ]]; then
 fi
 
 #############################
-# 4. Oh‑My‑Zsh              #
+# 4. Oh-My-Zsh              #
 #############################
 ensure_omz() {
   command -v git &>/dev/null || { info "Installing git"; sudo apt install -y git >/dev/null; }
   if [[ ! -d $HOME/.oh-my-zsh ]]; then
-    info "Installing Oh‑My‑Zsh"
+    info "Installing Oh-My-Zsh"
     RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" >/dev/null
-    ok "Oh‑My‑Zsh installed"
+    ok "Oh-My-Zsh installed"
   else
-    git -C "$HOME/.oh-my-zsh" pull --quiet --ff-only && ok "Oh‑My‑Zsh updated"
+    git -C "$HOME/.oh-my-zsh" pull --quiet --ff-only && ok "Oh-My-Zsh updated"
   fi
 }
 ensure_omz
@@ -91,7 +104,7 @@ else
 fi
 
 #############################
-# 6. Oh‑My‑Zsh plugins       #
+# 6. Oh-My-Zsh plugins       #
 #############################
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 clone() { [[ -d $2 ]] || git clone --quiet --depth 1 "$1" "$2"; }
