@@ -40,7 +40,7 @@ Every run mirrors the repo back onto `$HOME` with `rsync --delete`, so updates 
 | System utils | `curl`, `wget`, `rsync`, `jq`, `btop`, `ddate`, `git` |
 | Directory listing | **`lsd`** (colourful `ls` replacement) | Via **snap** on 22.04, via **apt** on 24.04+ |
 | Theming | Dracula theme for btop, LSD colours, Dracula‑Pro for Neovim |
-| Dot‑files | Repo tarball is downloaded, then `rsync -a --update` into `$HOME` — *no deletions*; excludes `.ssh`, READMEs, `*setup.sh*`. |
+| Dot‑files | Repo tarball is downloaded, then `rsync -a --update` into `$HOME` | *no deletions*; excludes `.ssh`, READMEs, `*setup.sh*`. |
 | Permissions | `.ssh` fixed to `0700 / 0600`, OMZ fixed to `0755` |
 | Cleanup | Temp dir + any copied `ubuntu-bootstrap.sh` removed |
 
