@@ -38,7 +38,7 @@ Every run mirrors the repo back onto `$HOME` with `rsync --delete`, so updates 
 | Prompt extras | Dracula‑Pro theme, `zsh‑syntax‑highlighting`, `zsh‑autosuggestions`, `zsh‑completions`, `autoupdate` |
 | Editors & viewers | `neovim`, `tree`, `ncdu`, `lynx` |
 | System utils | `curl`, `wget`, `rsync`, `jq`, `btop`, `ddate`, `git` |
-| Directory listing | **`lsd`** (colourful `ls` replacement) — via **snap** on 22.04, via **apt** on 24.04+ |
+| Directory listing | **`lsd`** (colourful `ls` replacement) | Via **snap** on 22.04, via **apt** on 24.04+ |
 | Theming | Dracula theme for btop, LSD colours, Dracula‑Pro for Neovim |
 | Dot‑files | Repo tarball is downloaded, then `rsync -a --update` into `$HOME` — *no deletions*; excludes `.ssh`, READMEs, `*setup.sh*`. |
 | Permissions | `.ssh` fixed to `0700 / 0600`, OMZ fixed to `0755` |
