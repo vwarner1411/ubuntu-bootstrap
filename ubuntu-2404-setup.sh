@@ -14,7 +14,7 @@ trap cleanup EXIT
 # 1. Privilege check              #
 ###################################
 if [[ $(id -u) -eq 0 ]]; then
-  echo "Run this script as a sudo‑capable user, not root." >&2
+  echo "Run this script as a sudo-capable user, not root." >&2
   exit 1
 fi
 
@@ -48,13 +48,25 @@ if [[ $SHELL != $(command -v zsh) ]]; then
 fi
 
 ###################################
-# 4. Oh‑My‑Zsh (install git if needed)
+# 4. Ensure Oh‑My‑Zsh             #
 ###################################
-if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
+ensure_ohmyzsh() {
   command -v git &>/dev/null || { echo "Installing git for Oh‑My‑Zsh…"; sudo apt install -y git; }
-  RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-fi
+  if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
+    echo "Installing Oh‑My‑Zsh…"
+    RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
+      sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+  else
+    echo "Updating existing Oh‑My‑Zsh…"
+    git -C "$HOME/.oh-my-zsh" pull --quiet --ff-only || {
+      echo "Oh‑My‑Zsh repo damaged – reinstalling…";
+      rm -rf "$HOME/.oh-my-zsh"
+      RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
+        sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    }
+  fi
+}
+ensure_ohmyzsh
 
 ###################################
 # 5. Fetch & copy repo files      #
@@ -82,12 +94,12 @@ fi
 # 6. Ensure Oh‑My‑Zsh plugins     #
 ###################################
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
-clone() { [[ -d "$2" ]] || git clone --depth 1 "$1" "$2"; }
+clone_plugin() { [[ -d "$2" ]] || git clone --depth 1 "$1" "$2"; }
 command -v git &>/dev/null || sudo apt install -y git
-clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
-clone https://github.com/zsh-users/zsh-autosuggestions.git        "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
-clone https://github.com/zsh-users/zsh-completions.git            "$ZSH_CUSTOM/plugins/zsh-completions"
-clone https://github.com/TamCore/autoupdate-oh-my-zsh-plugins.git "$ZSH_CUSTOM/plugins/autoupdate"
+clone_plugin https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
+clone_plugin https://github.com/zsh-users/zsh-autosuggestions.git        "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
+clone_plugin https://github.com/zsh-users/zsh-completions.git            "$ZSH_CUSTOM/plugins/zsh-completions"
+clone_plugin https://github.com/TamCore/autoupdate-oh-my-zsh-plugins.git "$ZSH_CUSTOM/plugins/autoupdate"
 
 ###################################
 # 7. Done                         #
