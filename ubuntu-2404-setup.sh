@@ -12,35 +12,37 @@ if [[ -t 1 ]]; then
 else
   BOLD=""; RESET=""; BLUE=""; GREEN=""; YELLOW=""; RED=""
 fi
-info()    { echo -e "${BLUE}${BOLD}▶${RESET} $*"; }
-ok()      { echo -e "${GREEN}${BOLD}✔${RESET} $*"; }
-warn()    { echo -e "${YELLOW}${BOLD}!${RESET} $*"; }
-fail()    { echo -e "${RED}${BOLD}✖${RESET} $*"; exit 1; }
+info() { echo -e "${BLUE}${BOLD}▶${RESET} $*"; }
+ok()   { echo -e "${GREEN}${BOLD}✔${RESET} $*"; }
+warn() { echo -e "${YELLOW}${BOLD}!${RESET} $*"; }
+fail() { echo -e "${RED}${BOLD}✖${RESET} $*"; exit 1; }
 
 TMPDIR=""
-cleanup() { [[ -n "$TMPDIR" && -d "$TMPDIR" ]] && rm -rf "$TMPDIR"; }
+cleanup() {
+  [[ -n $TMPDIR && -d $TMPDIR ]] && rm -rf "$TMPDIR"
+  # remove copied script if it exists in HOME
+  [[ -f "$HOME/ubuntu-2404-setup.sh" ]] && rm -f "$HOME/ubuntu-2404-setup.sh"
+}
 trap cleanup EXIT
 
 #############################
 # 1. Privilege check        #
 #############################
-if [[ $(id -u) -eq 0 ]]; then fail "Do not run as root. Use a regular user with sudo."; fi
+[[ $(id -u) -ne 0 ]] || fail "Do not run as root. Use a regular user with sudo."
 
 #############################
 # 2. Packages               #
 #############################
 read -rp "${BOLD}Update APT and install required packages? [y/N] ${RESET}" confirm
 [[ ${confirm,,} == y* ]] || fail "Aborted by user."
-
-need_pkg() { command -v "$1" &>/dev/null || PKGS+=("${2:-$1}"); }
-PKGS=()
-need_pkg curl; need_pkg rsync; need_pkg jq; need_pkg lsd; need_pkg btop; need_pkg nvim neovim; need_pkg zsh; need_pkg ddate
+PKGS=(); need(){ command -v "$1" &>/dev/null || PKGS+=("${2:-$1}"); }
+need curl; need rsync; need jq; need lsd; need btop; need nvim neovim; need zsh; need ddate
 if ((${#PKGS[@]})); then
   info "Installing: ${PKGS[*]}"
   sudo apt update -qq && sudo apt install -y ${PKGS[*]} >/dev/null
   ok "Packages installed"
 else
-  ok "All required packages already present"
+  ok "Required packages already present"
 fi
 
 #############################
@@ -55,7 +57,7 @@ fi
 #############################
 # 4. Oh‑My‑Zsh              #
 #############################
-ensure_ohmyzsh() {
+ensure_omz() {
   command -v git &>/dev/null || { info "Installing git"; sudo apt install -y git >/dev/null; }
   if [[ ! -d $HOME/.oh-my-zsh ]]; then
     info "Installing Oh‑My‑Zsh"
@@ -65,7 +67,7 @@ ensure_ohmyzsh() {
     git -C "$HOME/.oh-my-zsh" pull --quiet --ff-only && ok "Oh‑My‑Zsh updated"
   fi
 }
-ensure_ohmyzsh
+ensure_omz
 
 #############################
 # 5. Dotfiles repo          #
@@ -81,7 +83,8 @@ if [[ -n $GITHUB_DOTFILES ]]; then
   done || fail "Cannot download repo archive"
   tar -xzf "$TMPDIR/repo.tar.gz" -C "$TMPDIR"
   SRC=$(find "$TMPDIR" -maxdepth 1 -type d -name '*-*' | head -n1)
-  rsync -a --update --quiet --exclude ".git" "$SRC/" "$HOME/"
+  EXCLUDES=(--exclude ".git" --exclude "README*" --exclude "*setup.sh*")
+  rsync -a --update --quiet "${EXCLUDES[@]}" "$SRC/" "$HOME/"
   ok "Dotfiles copied"
 else
   warn "No GITHUB_DOTFILES provided – skipping dotfiles sync"
@@ -91,11 +94,11 @@ fi
 # 6. Oh‑My‑Zsh plugins       #
 #############################
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
-clone_plugin() { [[ -d $2 ]] || git clone --quiet --depth 1 "$1" "$2"; }
-clone_plugin https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
-clone_plugin https://github.com/zsh-users/zsh-autosuggestions.git        "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
-clone_plugin https://github.com/zsh-users/zsh-completions.git            "$ZSH_CUSTOM/plugins/zsh-completions"
-clone_plugin https://github.com/TamCore/autoupdate-oh-my-zsh-plugins.git "$ZSH_CUSTOM/plugins/autoupdate"
+clone() { [[ -d $2 ]] || git clone --quiet --depth 1 "$1" "$2"; }
+clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
+clone https://github.com/zsh-users/zsh-autosuggestions.git        "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
+clone https://github.com/zsh-users/zsh-completions.git            "$ZSH_CUSTOM/plugins/zsh-completions"
+clone https://github.com/TamCore/autoupdate-oh-my-zsh-plugins.git "$ZSH_CUSTOM/plugins/autoupdate"
 ok "Zsh plugins ensured"
 
 #############################
