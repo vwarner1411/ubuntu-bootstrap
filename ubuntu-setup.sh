@@ -17,6 +17,7 @@ ok()   { echo -e "${GREEN}${BOLD}✔${RESET} $*"; }
 warn() { echo -e "${YELLOW}${BOLD}!${RESET} $*"; }
 fail() { echo -e "${RED}${BOLD}✖${RESET} $*"; exit 1; }
 
+export DEBIAN_FRONTEND=noninteractive
 TMPDIR=""
 cleanup() { [[ -n $TMPDIR && -d $TMPDIR ]] && rm -rf "$TMPDIR"; [[ -f "$HOME/ubuntu-bootstrap.sh" ]] && rm -f "$HOME/ubuntu-bootstrap.sh"; }
 trap cleanup EXIT
@@ -33,7 +34,7 @@ if [[ -t 0 ]]; then
   read -rp "${BOLD}Update APT and install required packages? [y/N] ${RESET}" confirm
   [[ ${confirm,,} == y* ]] || fail "Aborted by user."
 else
-  info "Non‑interactive shell detected – proceeding with package install"
+  info "Non-interactive shell detected – proceeding with package install"
 fi
 
 source /etc/os-release || true
@@ -45,7 +46,7 @@ need git; need curl; need wget; need rsync; need tree; need ncdu; need lynx; nee
 if ! command -v lsd &>/dev/null; then
   if [[ $CODENAME == jammy ]]; then
     info "Installing lsd via snap (22.04)"
-    sudo apt update -qq && sudo apt install -y snapd >/dev/null
+    sudo apt-get update -qq && sudo apt-get install -y snapd >/dev/null
     sudo snap install lsd >/dev/null
     ok "lsd snap installed"
   else
@@ -55,7 +56,7 @@ fi
 
 if ((${#PKGS[@]})); then
   info "Installing APT packages: ${PKGS[*]}"
-  sudo apt update -qq && sudo apt install -y ${PKGS[*]} >/dev/null
+  sudo apt-get update -qq && sudo apt-get install -y ${PKGS[*]} >/dev/null
   ok "APT packages installed"
 fi
 
@@ -72,7 +73,7 @@ fi
 # 4. Oh-My-Zsh install/update     #
 ###################################
 ensure_omz() {
-  command -v git &>/dev/null || { info "Installing git"; sudo apt install -y git >/dev/null; }
+  command -v git &>/dev/null || { info "Installing git"; sudo apt-get install -y git >/dev/null; }
   if [[ ! -d $HOME/.oh-my-zsh ]]; then
     info "Installing Oh-My-Zsh"
     RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" >/dev/null
