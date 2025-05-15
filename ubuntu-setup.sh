@@ -3,9 +3,9 @@
 # ubuntu-bootstrap.sh
 set -euo pipefail
 
-#############################
-# Colour helpers            #
-#############################
+export NEEDRESTART_MODE=a 
+
+# Colour helpers
 if [[ -t 1 ]]; then
   BOLD="$(tput bold)"; RESET="$(tput sgr0)"
   BLUE="$(tput setaf 4)"; GREEN="$(tput setaf 2)"; YELLOW="$(tput setaf 3)"; RED="$(tput setaf 1)"
@@ -22,14 +22,10 @@ TMPDIR=""
 cleanup() { [[ -n $TMPDIR && -d $TMPDIR ]] && rm -rf "$TMPDIR"; [[ -f "$HOME/ubuntu-bootstrap.sh" ]] && rm -f "$HOME/ubuntu-bootstrap.sh"; }
 trap cleanup EXIT
 
-###################################
-# 1. Privilege check              #
-###################################
+# 1. Privilege check
 [[ $(id -u) -ne 0 ]] || fail "Do not run as root. Use sudo when prompted."
 
-###################################
-# 2. Package handling             #
-###################################
+# 2. Package handling
 if [[ -t 0 ]]; then
   read -rp "${BOLD}Update APT and install required packages? [y/N] ${RESET}" confirm
   [[ ${confirm,,} == y* ]] || fail "Aborted by user."
@@ -73,24 +69,24 @@ fi
 
 if ((${#PKGS[@]})); then
   info "Installing APT packages: ${PKGS[*]}"
-  sudo apt-get update -qq && sudo apt-get install -y ${PKGS[*]} >/dev/null
+  sudo apt-get update -qq \
+  && sudo apt-get install -y -qq --no-install-recommends \
+     -o Dpkg::Options::="--force-confdef" \
+     -o Dpkg::Options::="--force-confold" \
+     ${PKGS[*]} >/dev/null
   ok "APT packages installed"
 else
   ok "All requested APT packages already present"
 fi
 
-###################################
-# 3. Default shell                #
-###################################
+# 3. Default shell
 if [[ $SHELL != $(command -v zsh) ]]; then
   info "Setting default shell to zsh"
   chsh -s "$(command -v zsh)" "$USER"
   ok "Default shell switched"
 fi
 
-###################################
-# 4. Oh-My-Zsh install/update     #
-###################################
+# 4. Oh-My-Zsh install/update
 ensure_omz() {
   command -v git &>/dev/null || { info "Installing git"; sudo apt-get install -y git >/dev/null; }
   if [[ ! -d $HOME/.oh-my-zsh ]]; then
@@ -105,9 +101,7 @@ ensure_omz() {
 }
 ensure_omz
 
-###################################
-# 5. Sync dotfiles (excludes .ssh) #
-###################################
+# 5. Sync dotfiles (excludes .ssh)
 GITHUB_DOTFILES="${1:-${GITHUB_DOTFILES:-}}"
 if [[ -n $GITHUB_DOTFILES ]]; then
   info "Syncing dotfiles from $GITHUB_DOTFILES"
@@ -126,9 +120,7 @@ else
   warn "No GITHUB_DOTFILES provided – skipping dotfiles sync"
 fi
 
-###################################
-# 6. Ensure Zsh plugins           #
-###################################
+# 6. Ensure Zsh plugins
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 clone() { [[ -d $2 ]] || git clone --quiet --depth 1 "$1" "$2"; }
 clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
@@ -137,9 +129,7 @@ clone https://github.com/zsh-users/zsh-completions.git            "$ZSH_CUSTOM/p
 clone https://github.com/TamCore/autoupdate-oh-my-zsh-plugins.git "$ZSH_CUSTOM/plugins/autoupdate"
 ok "Zsh plugins ensured"
 
-###################################
 # 7. Add /snap/bin to PATH (Jammy)
-###################################
 if [[ $CODENAME == jammy ]]; then
   [[ -f $HOME/.zshrc ]] || touch "$HOME/.zshrc"
   if ! grep -q "/snap/bin" "$HOME/.zshrc"; then
@@ -148,7 +138,4 @@ if [[ $CODENAME == jammy ]]; then
   fi
 fi
 
-###################################
-# 8. Finish                       #
-###################################
 ok "Setup complete. Open a new terminal session to start using your environment."
