@@ -38,7 +38,7 @@ read -rp "${BOLD}Update APT and install required packages? [y/N] ${RESET}" confi
 source /etc/os-release || true
 CODENAME="${UBUNTU_CODENAME:-${VERSION_CODENAME:-}}"
 PKGS=(); need(){ command -v "$1" &>/dev/null || PKGS+=("${2:-$1}"); }
-need git; need curl; need wget; need rsync; need jq; need tree; need ncdu; need lynx; need btop; need neovim; need zsh; need ddate; need nfs-common; need locate; need sysstat; need iotop; need iftop
+need git; need curl; need wget; need rsync; need tree; need ncdu; need lynx; need btop; need neovim; need zsh; need ddate; need nfs-common; need locate; need sysstat; need iotop; need iftop
 
 # lsd handling
 if ! command -v lsd &>/dev/null; then
