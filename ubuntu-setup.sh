@@ -87,9 +87,8 @@ ensure_omz(){
   else
     git -C "$HOME/.oh-my-zsh" pull --quiet --ff-only && ok "Oh-My-Zsh updated"
   fi
-  # Secure permissions (compaudit fix)
-  compaudit | xargs -r chmod g-w,o-w
-  chmod -R go-w "$HOME/.oh-my-zsh"
+  
+  chmod -R 755 "$HOME/.oh-my-zsh"
   ok "Oh-My-Zsh permissions secured"
 }
 ensure_omz
