@@ -45,7 +45,7 @@ need showmount nfs-common; need locate locate; need mpstat sysstat; need iotop i
 if ! command -v lsd &>/dev/null; then
   if [[ $CODENAME == jammy ]]; then
     info "Installing lsd via snap (22.04)"
-    sudo apt-get update -qq && sudo apt-get install -y snapd >/dev/null
+    sudo -E env NEEDRESTART_MODE=a apt-get update -qq && sudo -E env NEEDRESTART_MODE=a apt-get install -y snapd >/dev/null
     sudo snap install lsd >/dev/null
     ok "lsd snap installed"
   else
@@ -58,8 +58,8 @@ mapfile -t PKGS < <(printf '%s\n' "${PKGS[@]}" | sort -u)
 
 if ((${#PKGS[@]})); then
   info "Installing APT packages: ${PKGS[*]}"
-  sudo NEEDRESTART_MODE=a apt-get update -qq
-  sudo NEEDRESTART_MODE=a apt-get install -y -qq --no-install-recommends \
+  sudo -E env NEEDRESTART_MODE=a apt-get update -qq
+  sudo -E env NEEDRESTART_MODE=a apt-get install -y -qq --no-install-recommends \
        -o Dpkg::Options::="--force-confdef" \
        -o Dpkg::Options::="--force-confold" \
        ${PKGS[*]} >/dev/null
@@ -67,7 +67,6 @@ if ((${#PKGS[@]})); then
 else
   ok "All requested APT packages already present"
 fi
-
 
 # 3. Default shell
 if [[ $SHELL != $(command -v zsh) ]]; then
