@@ -3,7 +3,8 @@
 # ubuntu-bootstrap.sh
 set -euo pipefail
 
-export NEEDRESTART_MODE=a 
+export DEBIAN_FRONTEND=noninteractive
+export NEEDRESTART_MODE=a  # ensure non‑interactive restarts
 
 # Colour helpers
 if [[ -t 1 ]]; then
@@ -17,7 +18,6 @@ ok()   { echo -e "${GREEN}${BOLD}✔${RESET} $*"; }
 warn() { echo -e "${YELLOW}${BOLD}!${RESET} $*"; }
 fail() { echo -e "${RED}${BOLD}✖${RESET} $*"; exit 1; }
 
-export DEBIAN_FRONTEND=noninteractive
 TMPDIR=""
 cleanup() { [[ -n $TMPDIR && -d $TMPDIR ]] && rm -rf "$TMPDIR"; [[ -f "$HOME/ubuntu-bootstrap.sh" ]] && rm -f "$HOME/ubuntu-bootstrap.sh"; }
 trap cleanup EXIT
@@ -36,24 +36,10 @@ fi
 source /etc/os-release || true
 CODENAME="${UBUNTU_CODENAME:-${VERSION_CODENAME:-}}"
 PKGS=()
-need() { command -v "$1" &>/dev/null || PKGS+=("$2"); }
-# Binary → package mappings
-need git git
-need curl curl
-need wget wget
-need rsync rsync
-need tree tree
-need ncdu ncdu
-need lynx lynx
-need btop btop
-need nvim neovim
-need zsh zsh
-need ddate ddate
-need showmount nfs-common
-need locate locate
-need mpstat sysstat
-need iotop iotop
-need iftop iftop
+need(){ command -v "$1" &>/dev/null || PKGS+=("$2"); }
+need git git; need curl curl; need wget wget; need rsync rsync; need tree tree; need ncdu ncdu
+need lynx lynx; need btop btop; need nvim neovim; need zsh zsh; need ddate ddate
+need showmount nfs-common; need locate locate; need mpstat sysstat; need iotop iotop; need iftop iftop
 
 # lsd handling
 if ! command -v lsd &>/dev/null; then
@@ -67,17 +53,21 @@ if ! command -v lsd &>/dev/null; then
   fi
 fi
 
+# Deduplicate package list
+mapfile -t PKGS < <(printf '%s\n' "${PKGS[@]}" | sort -u)
+
 if ((${#PKGS[@]})); then
   info "Installing APT packages: ${PKGS[*]}"
-  sudo apt-get update -qq \
-  && sudo apt-get install -y -qq --no-install-recommends \
-     -o Dpkg::Options::="--force-confdef" \
-     -o Dpkg::Options::="--force-confold" \
-     ${PKGS[*]} >/dev/null
+  sudo NEEDRESTART_MODE=a apt-get update -qq
+  sudo NEEDRESTART_MODE=a apt-get install -y -qq --no-install-recommends \
+       -o Dpkg::Options::="--force-confdef" \
+       -o Dpkg::Options::="--force-confold" \
+       ${PKGS[*]} >/dev/null
   ok "APT packages installed"
 else
   ok "All requested APT packages already present"
 fi
+
 
 # 3. Default shell
 if [[ $SHELL != $(command -v zsh) ]]; then
