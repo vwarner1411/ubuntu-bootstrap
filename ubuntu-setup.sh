@@ -107,7 +107,7 @@ if [[ -n $GITHUB_DOTFILES ]]; then
   ok "Dotfiles copied"
 
   chmod -R go-w "$HOME/.oh-my-zsh"
-  ok "Oh-My-Zsh permissions secured"
+  ok "Oh-My-Zsh permissions set"
 else
   warn "No GITHUB_DOTFILES provided – skipping dotfiles sync"
 fi
@@ -122,4 +122,5 @@ clone https://github.com/TamCore/autoupdate-oh-my-zsh-plugins.git "$ZSH_CUSTOM/p
 ok "Zsh plugins ensured"
 
 # ── 7. Finish ─────────────────────────────────────────────────────
-ok "Setup complete. Open a new terminal session to start using your environment."
+ok "Setup complete."
+source ~/.zshrc
