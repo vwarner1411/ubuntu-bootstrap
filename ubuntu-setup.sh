@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
-#valerie.e.warner@gmail.com
-# ubuntu-bootstrap.sh ░ v14 – snap PATH fix for Jammy + extras list intact
-# -------------------------------------------------------------------
-#  • Adds /snap/bin to PATH in ~/.zshrc when running on Ubuntu 22.04 (Jammy)
-#  • Keeps full package list, lsd snap fallback, SSH & OMZ permissions fixes
-# -------------------------------------------------------------------
+# valerie.e.warner@gmail.com
+# ubuntu-bootstrap.sh
 set -euo pipefail
 
 #############################
@@ -22,10 +18,7 @@ warn() { echo -e "${YELLOW}${BOLD}!${RESET} $*"; }
 fail() { echo -e "${RED}${BOLD}✖${RESET} $*"; exit 1; }
 
 TMPDIR=""
-cleanup() {
-  [[ -n $TMPDIR && -d $TMPDIR ]] && rm -rf "$TMPDIR"
-  [[ -f "$HOME/ubuntu-bootstrap.sh" ]] && rm -f "$HOME/ubuntu-bootstrap.sh"
-}
+cleanup() { [[ -n $TMPDIR && -d $TMPDIR ]] && rm -rf "$TMPDIR"; [[ -f "$HOME/ubuntu-bootstrap.sh" ]] && rm -f "$HOME/ubuntu-bootstrap.sh"; }
 trap cleanup EXIT
 
 ###################################
@@ -36,8 +29,12 @@ trap cleanup EXIT
 ###################################
 # 2. Package handling             #
 ###################################
-read -rp "${BOLD}Update APT and install required packages? [y/N] ${RESET}" confirm
-[[ ${confirm,,} == y* ]] || fail "Aborted by user."
+if [[ -t 0 ]]; then
+  read -rp "${BOLD}Update APT and install required packages? [y/N] ${RESET}" confirm
+  [[ ${confirm,,} == y* ]] || fail "Aborted by user."
+else
+  info "Non‑interactive shell detected – proceeding with package install"
+fi
 
 source /etc/os-release || true
 CODENAME="${UBUNTU_CODENAME:-${VERSION_CODENAME:-}}"
@@ -48,7 +45,7 @@ need git; need curl; need wget; need rsync; need tree; need ncdu; need lynx; nee
 if ! command -v lsd &>/dev/null; then
   if [[ $CODENAME == jammy ]]; then
     info "Installing lsd via snap (22.04)"
-    sudo apt-get update -qq && sudo apt-get install -y snapd >/dev/null
+    sudo apt update -qq && sudo apt install -y snapd >/dev/null
     sudo snap install lsd >/dev/null
     ok "lsd snap installed"
   else
@@ -58,7 +55,7 @@ fi
 
 if ((${#PKGS[@]})); then
   info "Installing APT packages: ${PKGS[*]}"
-  sudo apt-get update -qq && sudo apt-get install -y ${PKGS[*]} >/dev/null
+  sudo apt update -qq && sudo apt install -y ${PKGS[*]} >/dev/null
   ok "APT packages installed"
 fi
 
@@ -110,16 +107,7 @@ else
 fi
 
 ###################################
-# 6. SSH permissions              #
-###################################
-if [[ -d $HOME/.ssh ]]; then
-  chmod 700 "$HOME/.ssh"
-  [[ -f $HOME/.ssh/authorized_keys ]] && chmod 600 "$HOME/.ssh/authorized_keys"
-  ok "SSH directory permissions set"
-fi
-
-###################################
-# 7. Ensure Zsh plugins           #
+# 6. Ensure Zsh plugins           #
 ###################################
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 clone() { [[ -d $2 ]] || git clone --quiet --depth 1 "$1" "$2"; }
@@ -130,7 +118,7 @@ clone https://github.com/TamCore/autoupdate-oh-my-zsh-plugins.git "$ZSH_CUSTOM/p
 ok "Zsh plugins ensured"
 
 ###################################
-# 8. Add /snap/bin to PATH for Jammy
+# 7. Add /snap/bin to PATH (Jammy)
 ###################################
 if [[ $CODENAME == jammy ]]; then
   [[ -f $HOME/.zshrc ]] || touch "$HOME/.zshrc"
@@ -141,6 +129,6 @@ if [[ $CODENAME == jammy ]]; then
 fi
 
 ###################################
-# 9. Finish                       #
+# 8. Finish                       #
 ###################################
 ok "Setup complete. Open a new terminal session to start using your environment."
