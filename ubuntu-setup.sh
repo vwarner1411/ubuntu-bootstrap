@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# valerie.e.warner@gmail.com
+# valerie.warner@oceanxplorer.org
 # ubuntu-bootstrap.sh
 set -euo pipefail
 
@@ -39,8 +39,25 @@ fi
 
 source /etc/os-release || true
 CODENAME="${UBUNTU_CODENAME:-${VERSION_CODENAME:-}}"
-PKGS=(); need(){ command -v "$1" &>/dev/null || PKGS+=("${2:-$1}"); }
-need git; need curl; need wget; need rsync; need tree; need ncdu; need lynx; need btop; need neovim; need zsh; need ddate; need nfs-common; need locate; need sysstat; need iotop; need iftop
+PKGS=()
+need() { command -v "$1" &>/dev/null || PKGS+=("$2"); }
+# Binary → package mappings
+need git git
+need curl curl
+need wget wget
+need rsync rsync
+need tree tree
+need ncdu ncdu
+need lynx lynx
+need btop btop
+need nvim neovim
+need zsh zsh
+need ddate ddate
+need showmount nfs-common
+need locate locate
+need mpstat sysstat
+need iotop iotop
+need iftop iftop
 
 # lsd handling
 if ! command -v lsd &>/dev/null; then
@@ -58,6 +75,8 @@ if ((${#PKGS[@]})); then
   info "Installing APT packages: ${PKGS[*]}"
   sudo apt-get update -qq && sudo apt-get install -y ${PKGS[*]} >/dev/null
   ok "APT packages installed"
+else
+  ok "All requested APT packages already present"
 fi
 
 ###################################
