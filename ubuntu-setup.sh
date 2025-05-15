@@ -122,4 +122,3 @@ ok "Zsh plugins ensured"
 
 # ── 7. Finish ─────────────────────────────────────────────────────
 ok "Setup complete. Open a new terminal session to start using your environment."
-
