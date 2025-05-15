@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-# valerie.e.warner@gmail.com
-# Ubuntu post-install bootstrap script
+#valerie.e.warner@gmail.com
+# ubuntu-bootstrap.sh ░ v14 – snap PATH fix for Jammy + extras list intact
+# -------------------------------------------------------------------
+#  • Adds /snap/bin to PATH in ~/.zshrc when running on Ubuntu 22.04 (Jammy)
+#  • Keeps full package list, lsd snap fallback, SSH & OMZ permissions fixes
+# -------------------------------------------------------------------
 set -euo pipefail
 
 #############################
@@ -44,7 +48,7 @@ need git; need curl; need wget; need rsync; need tree; need ncdu; need lynx; nee
 if ! command -v lsd &>/dev/null; then
   if [[ $CODENAME == jammy ]]; then
     info "Installing lsd via snap (22.04)"
-    sudo apt update -qq && sudo apt install -y snapd >/dev/null
+    sudo apt-get update -qq && sudo apt-get install -y snapd >/dev/null
     sudo snap install lsd >/dev/null
     ok "lsd snap installed"
   else
@@ -54,7 +58,7 @@ fi
 
 if ((${#PKGS[@]})); then
   info "Installing APT packages: ${PKGS[*]}"
-  sudo apt update -qq && sudo apt install -y ${PKGS[*]} >/dev/null
+  sudo apt-get update -qq && sudo apt-get install -y ${PKGS[*]} >/dev/null
   ok "APT packages installed"
 fi
 
@@ -79,6 +83,8 @@ ensure_omz() {
   else
     git -C "$HOME/.oh-my-zsh" pull --quiet --ff-only && ok "Oh-My-Zsh updated"
   fi
+  chmod -R 755 "$HOME/.oh-my-zsh"
+  ok "Fixed Oh-My-Zsh permissions"
 }
 ensure_omz
 
@@ -99,11 +105,8 @@ if [[ -n $GITHUB_DOTFILES ]]; then
   EXCLUDES=(--exclude ".git" --exclude "README*" --exclude "*setup.sh*" --exclude ".ssh")
   rsync -a --update --quiet "${EXCLUDES[@]}" "$SRC/" "$HOME/"
   ok "Dotfiles copied"
-  chmod -R 755 "$HOME/.oh-my-zsh"
-  ok "Fixed Oh-My-Zsh permissions"
 else
   warn "No GITHUB_DOTFILES provided – skipping dotfiles sync"
-
 fi
 
 ###################################
@@ -127,6 +130,17 @@ clone https://github.com/TamCore/autoupdate-oh-my-zsh-plugins.git "$ZSH_CUSTOM/p
 ok "Zsh plugins ensured"
 
 ###################################
-# 8. Finish                       #
+# 8. Add /snap/bin to PATH for Jammy
+###################################
+if [[ $CODENAME == jammy ]]; then
+  [[ -f $HOME/.zshrc ]] || touch "$HOME/.zshrc"
+  if ! grep -q "/snap/bin" "$HOME/.zshrc"; then
+    echo -e "\n# Add snap to PATH for Jammy\nexport PATH=\"$PATH:/snap/bin/\"" >> "$HOME/.zshrc"
+    ok "Appended /snap/bin to PATH in .zshrc"
+  fi
+fi
+
+###################################
+# 9. Finish                       #
 ###################################
 ok "Setup complete. Open a new terminal session to start using your environment."
