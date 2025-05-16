@@ -37,7 +37,7 @@ source /etc/os-release || true
 CODENAME="${UBUNTU_CODENAME:-${VERSION_CODENAME:-}}"
 PKGS=()
 need(){ command -v "$1" &>/dev/null || PKGS+=("$2"); }
-need git git; need curl curl; need wget wget; need rsync rsync; need tree tree; need ncdu ncdu
+need git git; need curl curl; need wget wget; need rsync rsync; need tree tree; need ncdu ncdu; need jq jq
 need lynx lynx; need btop btop; need nvim neovim; need zsh zsh; need ddate ddate
 need showmount nfs-common; need locate locate; need mpstat sysstat; need iotop iotop; need iftop iftop
 
