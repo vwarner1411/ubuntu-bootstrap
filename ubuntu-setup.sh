@@ -73,7 +73,7 @@ fi
 # ── 3. Default shell ───────────────────────────────────────────────
 if [[ $SHELL != $(command -v zsh) ]]; then
   info "Setting default shell to zsh"
-  chsh -s "$(command -v zsh)" "$USER"
+  sudo -E chsh -s "$(command -v zsh)" "$USER"
   ok "Default shell switched"
 fi
 
