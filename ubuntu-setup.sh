@@ -11,7 +11,7 @@ if [[ -t 1 ]]; then
 else B= R= C= G= Y= E=; fi
 log(){ printf "%b▶%b %s\n" "$C$B" "$R" "$*"; }
 ok(){  printf "%b✔%b %s\n" "$G$B" "$R" "$*"; }
-warn(){printf "%b!%b %s\n" "$Y$B" "$R" "$*"; }
+warn(){ printf "%b!%b %s\n" "$Y$B" "$R" "$*"; }
 die(){ printf "%b✖%b %s\n" "$E$B" "$R" "$*"; exit 1; }
 
 [[ $(id -u) -eq 0 ]] && die "Run as your normal user (not root)."
