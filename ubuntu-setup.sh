@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # valerie.e.warner@gmail.com
 # ubuntu-bootstrap.sh
-set -euo pipefail
+set -Eeuo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 export NEEDRESTART_MODE=a
@@ -47,7 +47,7 @@ if ! command -v lsd &>/dev/null; then
     info "Installing lsd .deb (22.04)"
     ver=$(curl -fsSL https://api.github.com/repos/lsd-rs/lsd/releases/latest | jq -r '.tag_name')
     deb="lsd_${ver#v}_amd64.deb"
-    curl -fsSL -o /tmp/$deb https://github.com/lsd-rs/lsd/releases/download/${ver}/$deb
+    curl -fsSL -o /tmp/$deb "https://github.com/lsd-rs/lsd/releases/download/${ver}/$deb"
     sudo -E env NEEDRESTART_MODE=a apt-get update -qq
     sudo -E env NEEDRESTART_MODE=a apt-get install -y /tmp/$deb >/dev/null
     ok "lsd .deb installed"
@@ -77,7 +77,7 @@ if [[ $SHELL != $(command -v zsh) ]]; then
   ok "Default shell switched"
 fi
 
-# ── 4. Oh‑My‑Zsh ───────────────────────────────────────────────────
+# ── 4. Oh-My-Zsh ───────────────────────────────────────────────────
 ensure_omz(){
   command -v git &>/dev/null || { info "Installing git"; sudo apt-get install -y git >/dev/null; }
   if [[ ! -d $HOME/.oh-my-zsh ]]; then
@@ -87,11 +87,12 @@ ensure_omz(){
   else
     git -C "$HOME/.oh-my-zsh" pull --quiet --ff-only && ok "Oh-My-Zsh updated"
   fi
-  
+  # Secure permissions via compaudit (run inside zsh so $ZSH_VERSION is set)
+  zsh -ic 'autoload -Uz compaudit && compaudit | xargs -r chmod g-w,o-w' || true
 }
 ensure_omz
 
-# ── 5. Dot‑files sync ──────────────────────────────────────────────
+# ── 5. Dot-files sync (repo wins; no --update) ─────────────────────
 GITHUB_DOTFILES="${1:-${GITHUB_DOTFILES:-}}"
 if [[ -n $GITHUB_DOTFILES ]]; then
   info "Syncing dotfiles from $GITHUB_DOTFILES"
@@ -103,10 +104,13 @@ if [[ -n $GITHUB_DOTFILES ]]; then
   done || fail "Cannot download repo archive"
   tar -xzf "$TMPDIR/repo.tar.gz" -C "$TMPDIR"
   SRC=$(find "$TMPDIR" -maxdepth 1 -type d -name '*-*' | head -n1)
-  rsync -a --update --quiet --exclude ".git" --exclude "README*" --exclude "*setup.sh*" --exclude ".ssh" "$SRC/" "$HOME/"
+  rsync -a --quiet --delete \
+        --exclude ".git" --exclude "README*" --exclude "*setup.sh*" --exclude ".ssh" \
+        "$SRC/" "$HOME/"
   ok "Dotfiles copied"
 
-  chmod -R go-w "$HOME/.oh-my-zsh"
+  # Re-secure OMZ again in case the repo changed perms
+  zsh -ic 'autoload -Uz compaudit && compaudit | xargs -r chmod g-w,o-w' || true
   ok "Oh-My-Zsh permissions set"
 else
   warn "No GITHUB_DOTFILES provided – skipping dotfiles sync"
@@ -116,8 +120,8 @@ fi
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 clone(){ [[ -d $2 ]] || git clone --quiet --depth 1 "$1" "$2"; }
 clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
-clone https://github.com/zsh-users/zsh-autosuggestions.git        "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
-clone https://github.com/zsh-users/zsh-completions.git            "$ZSH_CUSTOM/plugins/zsh-completions"
+clone https://github.com/zsh-users/zsh-autosuggestions.git      "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
+clone https://github.com/zsh-users/zsh-completions.git          "$ZSH_CUSTOM/plugins/zsh-completions"
 clone https://github.com/TamCore/autoupdate-oh-my-zsh-plugins.git "$ZSH_CUSTOM/plugins/autoupdate"
 ok "Zsh plugins ensured"
 
