@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# valerie.e.warner@gmail.com
-# ubuntu-bootstrap.sh
+#valerie.e.warner@gmail.com
+# ubuntu-setup.sh — Ubuntu 22.04 / 24.04
 set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 export NEEDRESTART_MODE=a
 
-# ── Colour helpers ─────────────────────────────────────────────────
+# ── Colour helpers ────────────────────────────────────────────────
 if [[ -t 1 ]]; then
   BOLD="$(tput bold)"; RESET="$(tput sgr0)"
   BLUE="$(tput setaf 4)"; GREEN="$(tput setaf 2)"; YELLOW="$(tput setaf 3)"; RED="$(tput setaf 1)"
@@ -19,13 +19,13 @@ warn(){ echo -e "${YELLOW}${BOLD}!${RESET} $*"; }
 fail(){ echo -e "${RED}${BOLD}✖${RESET} $*"; exit 1; }
 
 TMPDIR=""
-cleanup(){ [[ -n $TMPDIR && -d $TMPDIR ]] && rm -rf "$TMPDIR"; [[ -f "$HOME/ubuntu-bootstrap.sh" ]] && rm -f "$HOME/ubuntu-bootstrap.sh"; }
+cleanup(){ [[ -n $TMPDIR && -d $TMPDIR ]] && rm -rf "$TMPDIR"; }
 trap cleanup EXIT
 
-# ── 1. Privilege check ─────────────────────────────────────────────
+# ── 1. Privilege check ────────────────────────────────────────────
 [[ $(id -u) -ne 0 ]] || fail "Do not run as root. Use sudo when prompted."
 
-# ── 2. Package handling ────────────────────────────────────────────
+# ── 2. Package handling ───────────────────────────────────────────
 if [[ -t 0 ]]; then
   read -rp "${BOLD}Update APT and install required packages? [y/N] ${RESET}" confirm
   [[ ${confirm,,} == y* ]] || fail "Aborted by user."
@@ -70,29 +70,29 @@ else
   ok "All requested APT packages already present"
 fi
 
-# ── 3. Default shell ───────────────────────────────────────────────
+# ── 3. Default shell ──────────────────────────────────────────────
 if [[ $SHELL != $(command -v zsh) ]]; then
   info "Setting default shell to zsh"
   sudo -E chsh -s "$(command -v zsh)" "$USER"
   ok "Default shell switched"
 fi
 
-# ── 4. Oh-My-Zsh ───────────────────────────────────────────────────
+# ── 4. Oh-My-Zsh ──────────────────────────────────────────────────
 ensure_omz(){
-  command -v git &>/dev/null || { info "Installing git"; sudo apt-get install -y git >/dev/null; }
-  if [[ ! -d $HOME/.oh-my-zsh ]]; then
+  if [[ ! -s $HOME/.oh-my-zsh/oh-my-zsh.sh ]]; then
     info "Installing Oh-My-Zsh"
-    RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" >/dev/null
+    RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
+      sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" >/dev/null
     ok "Oh-My-Zsh installed"
   else
     git -C "$HOME/.oh-my-zsh" pull --quiet --ff-only && ok "Oh-My-Zsh updated"
   fi
-  # Secure permissions WITHOUT reading your ~/.zshrc (note: -f)
+  # Secure permissions WITHOUT reading your ~/.zshrc
   zsh -f -c 'autoload -Uz compaudit; compaudit | xargs -r chmod g-w,o-w' || true
 }
 ensure_omz
 
-# ── 5. Dot-files sync (repo wins; no --update) ─────────────────────
+# ── 5. Dot-files sync (repo wins; protect OMZ) ────────────────────
 GITHUB_DOTFILES="${1:-${GITHUB_DOTFILES:-}}"
 if [[ -n $GITHUB_DOTFILES ]]; then
   info "Syncing dotfiles from $GITHUB_DOTFILES"
@@ -104,14 +104,24 @@ if [[ -n $GITHUB_DOTFILES ]]; then
   done || fail "Cannot download repo archive"
   tar -xzf "$TMPDIR/repo.tar.gz" -C "$TMPDIR"
   SRC=$(find "$TMPDIR" -maxdepth 1 -type d -name '*-*' | head -n1)
+
+  # 5a) Mirror everything EXCEPT the framework itself
   rsync -a --quiet --delete \
         --exclude ".git" --exclude "README*" --exclude "*setup.sh*" --exclude ".ssh" \
+        --exclude ".oh-my-zsh" \
         "$SRC/" "$HOME/"
   ok "Dotfiles copied"
 
-  # Re-secure OMZ again just in case repo altered perms
+  # 5b) If repo provides custom pieces, merge them into OMZ custom
+  if [[ -d "$SRC/.oh-my-zsh/custom" ]]; then
+    ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+    mkdir -p "$ZSH_CUSTOM"
+    rsync -a --quiet "$SRC/.oh-my-zsh/custom/" "$ZSH_CUSTOM/"
+    ok "Oh-My-Zsh custom merged from repo"
+  fi
+
+  # Re-secure OMZ again just in case
   zsh -f -c 'autoload -Uz compaudit; compaudit | xargs -r chmod g-w,o-w' || true
-  ok "Oh-My-Zsh permissions set"
 else
   warn "No GITHUB_DOTFILES provided – skipping dotfiles sync"
 fi
@@ -125,5 +135,5 @@ clone https://github.com/zsh-users/zsh-completions.git          "$ZSH_CUSTOM/plu
 clone https://github.com/TamCore/autoupdate-oh-my-zsh-plugins.git "$ZSH_CUSTOM/plugins/autoupdate"
 ok "Zsh plugins ensured"
 
-# ── 7. Finish (do NOT source .zshrc from bash) ────────────────────
+# ── 7. Finish (do NOT source .zshrc from bash) ───────────────────
 ok "Setup complete. Start zsh with: exec zsh -l"
