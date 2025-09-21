@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # valerie.e.warner@gmail.com
 # ubuntu-bootstrap.sh
-set -Eeuo pipefail
+set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 export NEEDRESTART_MODE=a
@@ -87,8 +87,8 @@ ensure_omz(){
   else
     git -C "$HOME/.oh-my-zsh" pull --quiet --ff-only && ok "Oh-My-Zsh updated"
   fi
-  # Secure permissions via compaudit (run inside zsh so $ZSH_VERSION is set)
-  zsh -ic 'autoload -Uz compaudit && compaudit | xargs -r chmod g-w,o-w' || true
+  # Secure permissions WITHOUT reading your ~/.zshrc (note: -f)
+  zsh -f -c 'autoload -Uz compaudit; compaudit | xargs -r chmod g-w,o-w' || true
 }
 ensure_omz
 
@@ -109,8 +109,8 @@ if [[ -n $GITHUB_DOTFILES ]]; then
         "$SRC/" "$HOME/"
   ok "Dotfiles copied"
 
-  # Re-secure OMZ again in case the repo changed perms
-  zsh -ic 'autoload -Uz compaudit && compaudit | xargs -r chmod g-w,o-w' || true
+  # Re-secure OMZ again just in case repo altered perms
+  zsh -f -c 'autoload -Uz compaudit; compaudit | xargs -r chmod g-w,o-w' || true
   ok "Oh-My-Zsh permissions set"
 else
   warn "No GITHUB_DOTFILES provided – skipping dotfiles sync"
@@ -125,6 +125,5 @@ clone https://github.com/zsh-users/zsh-completions.git          "$ZSH_CUSTOM/plu
 clone https://github.com/TamCore/autoupdate-oh-my-zsh-plugins.git "$ZSH_CUSTOM/plugins/autoupdate"
 ok "Zsh plugins ensured"
 
-# ── 7. Finish ─────────────────────────────────────────────────────
-ok "Setup complete."
-source ~/.zshrc
+# ── 7. Finish (do NOT source .zshrc from bash) ────────────────────
+ok "Setup complete. Start zsh with: exec zsh -l"
